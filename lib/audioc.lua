@@ -71,6 +71,13 @@ function stop(id)
   send(message)
 end
 
+---
+function pitch(id, pitchval)
+  local message
+     message = "pitch "..id.." "..pitchval
+     send(message)
+end
+
 
 ---
 function shift(id, channel)
@@ -88,8 +95,8 @@ end
 
 
 ---
-function pitch(id, speed)
-   local message = speed.." "..id
-   send(message)
-end
+--function pitch(id, speed)
+--   local message = speed.." "..id
+--   send(message)
+--end
 

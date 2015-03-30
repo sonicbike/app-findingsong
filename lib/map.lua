@@ -47,6 +47,7 @@ function resolve_ghost_zones(pos,layer,t)
     local ghosts={}
     for zone_index,zone in pairs(layer.zones) do
         if utils.find_value("Sample Parameters:Ghost",zone.categories) then
+            --print('Ghost Zone:'..zone.id)
             table.insert(post_ghost,blend_zone(zone,t))
         else
   	    table.insert(post_ghost,zone)

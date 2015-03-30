@@ -26,6 +26,8 @@ require 'audioc'
 require 'socket'
 
 ----------------------------------------------------------------
+local directionstate
+
 -- override for zones
 
 overrides = {
@@ -176,87 +178,100 @@ local one_shot_samples={}
 local pitch_change_samples={} -- samples change pitch on change of direction
 
 function play_events(events,pos_state)
-
+    
     -- first if the direction has been updated, go through
-    -- all the panned samples
     if pos_state.new_direction then
         print("updating direction")
+        -- all the panned samples
         for name,dir in pairs(panned_samples) do
             local pan=direction.pan_from(pos_state.dir,dir)
             print("shifting "..name.." to "..pan)
             audioc.shift(name,pan)
         end
+        -- all the samples to be pitch changed
+        for name,dir in pairs(pitch_change_samples) do
+            print("Change pitch of:"..name.." Direction:"..directionstate.direction)
+            newpitch = math.random(10)*0.2
+            audioc.pitch(name,newpitch)
+        end
+
     end
 
     -- now look through all the maps for new events
     for k,layer in pairs(events) do
+       
         for k,event in pairs(layer) do
-        engine.log(event.type.." "..event.zone_name.." in "..event.layer_name)
-
-        local switch_dir = cats_to_direction("Direction Parameter",event.zone_categories)
-        local heading = direction.resolve(poly.angle(pos_state.dir))
-
-        if (switch_dir~="centre") then
-            -- if this zone is using a direction to switch, check here
-            print("DIRECTIONAL--->"..switch_dir.." vs current "..heading)
-            if (direction_compare(switch_dir,heading)) then
-                    print "ACCEPTED"
-        else
-            print "wrong way"
-        end
-        end
-
-        if switch_dir=="centre" or direction_compare(switch_dir,heading) then
-                -- defaults
+            engine.log(event.type.." "..event.zone_name.." in "..event.layer_name)
+            -- Setup some vars
+            local switch_dir = cats_to_direction("Direction Parameter",event.zone_categories)
+            local heading = direction.resolve(poly.angle(pos_state.dir))
             local name=event.zone_name
-            local loop="no"
-        if (utils.find_value("Sample Parameters:Loop",event.zone_categories)) then
-               loop="yes"
+            -- Pitch stuff - does the zoen support pitch change on change of direction?
+            if (utils.find_value("Sample Parameters:Pitch",event.zone_categories)) then
+                print("Enable pitch change for: "..name)
+                pitch_change_samples[name]=switch_dir..'|'..heading
             end
-            local dir=cats_to_direction("Pan Parameter",event.zone_categories)
+            -- Directional stuff
+            if (switch_dir~="centre") then
+                -- if this zone is using a direction to switch, check here
+                print("DIRECTIONAL--->"..switch_dir.." vs current "..heading)
+                if (direction_compare(switch_dir,heading)) then
+                        print "ACCEPTED"
+                else
+                    print "wrong way"
+                end
+            end
 
-        -- is it a one shot sample?
-        if (utils.find_value("Sample Parameters:One shot",event.zone_categories)) then
-            one_shot_samples[name]="yes"
-        end
+            if switch_dir=="centre" or direction_compare(switch_dir,heading) then    
+                -- defaults
+                local name=event.zone_name
+                local loop="no"
+                if (utils.find_value("Sample Parameters:Loop",event.zone_categories)) then
+                    loop="yes"
+                end
+                local dir=cats_to_direction("Pan Parameter",event.zone_categories)
+                -- is it a one shot sample?
+                if (utils.find_value("Sample Parameters:One shot",event.zone_categories)) then
+                    one_shot_samples[name]="yes"
+                end
 
-        -- look for an override
+                -- look for an override
                 local override=overrides[event.zone_name]
                 if override then
-               dispatch_override(event,pos_state,override)
-            else
-            -- default behaviour
+                    dispatch_override(event,pos_state,override)
+                else
+                    -- default behaviour
                     if event.type=="entered-zone" then
-               if dir=="centre" then ----- normal -------
-                       if loop=="no" then
-                               audioc.play(name)
-                   else
-                   audioc.loop(name)
-                           end
-                       else ------- directional ---------------
-                           -- add to panned samples so we can update it later
-                   panned_samples[name]=dir
-               print("added panned "..name.." "..dir)
-                           local pan=direction.pan_from(pos_state.dir,dir)
-                       if loop=="no" then
-                               audioc.play(name,pan)
-               else
-                               audioc.loop(name,pan)
-                       end
-                       end
+                        if dir=="centre" then ----- normal -------
+                            if loop=="no" then
+                                audioc.play(name)
+                            else
+                                audioc.loop(name)
+                            end
+                        else ------- directional ---------------
+                            -- add to panned samples so we can update it later
+                            panned_samples[name]=dir
+                            print("added panned "..name.." "..dir)
+                            local pan=direction.pan_from(pos_state.dir,dir)
+                            if loop=="no" then
+                                audioc.play(name,pan)
+                            else
+                                audioc.loop(name,pan)
+                            end
+                        end
                     end
                 end
 
-            if event.type=="left-zone" then
-            if panned_samples[name] then
-                panned_samples[name]=nil
+                if event.type=="left-zone" then
+                    if panned_samples[name] then
+                        panned_samples[name]=nil
+                    end
+                    if one_shot_samples[name]~="yes" then
+                        audioc.fadeout(name)
+                    end
                 end
 
-                if one_shot_samples[name]~="yes" then
-                    audioc.fadeout(name)
-                end
-                end
-        end
+            end
         end
     end
 end
@@ -272,18 +287,17 @@ function update_pos_state(pos,state)
     if time_diff > CONFIG.direction_track_time then
         state.time = os.time()
         if state.pos then
-        local distance=poly.distance_km(pos.lat, pos.lng,
-                                state.pos.lat, state.pos.lng);
+            local distance=poly.distance_km(pos.lat, pos.lng,state.pos.lat, state.pos.lng);
             state.speed=distance/CONFIG.direction_track_time;
-        state.dir={lat=pos.lat-state.pos.lat,
-                       lng=pos.lng-state.pos.lng}
+            state.dir={lat=pos.lat-state.pos.lat,lng=pos.lng-state.pos.lng}
         end
         state.pos = pos
-    state.new_direction=true
-
-    log("speed is "..state.speed.."km/h"..
-            " direction is "..direction.resolve(poly.angle(state.dir)))
+        state.new_direction=true
+        state.direction = direction.resolve(poly.angle(state.dir))
+        log("speed is "..state.speed.."km/h"..
+            " direction is "..state.direction)
     end
+    directionstate = state
     return state
 end
 
@@ -292,20 +306,17 @@ end
 function load_events(events,pos_state)
     for k,layer in pairs(events) do
         for k,event in pairs(layer) do
-        engine.log("load event: "..event.type.." "..event.zone_name.." in "..event.layer_name)
-
-        -- zone name consists of:
+            engine.log("load event: "..event.type.." "..event.zone_name.." in "..event.layer_name)
+            -- zone name consists of:
             -- <name>_<loop>_<direction>_<ghost>
-        local tokens=std.split(event.zone_name,"_")
-
+            local tokens=std.split(event.zone_name,"_")
             -- defaults
-        local name=tokens[1]
-
+            local name=tokens[1]
             -- default behaviour
             if event.type=="entered-zone" then
                 audioc.load(name)
             end
-        if event.type=="left-zone" then
+            if event.type=="left-zone" then
                 audioc.unload(name)
             end
         end
