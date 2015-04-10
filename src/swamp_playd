@@ -35,7 +35,7 @@ CONFIG=utils.load_json("/home/sonic/sdcard/config.json")
 ----------------------------------------------------------------------------
 
 function load_sample(sample,name)
-    print("loading "..name)
+    --print("loading "..name)
     local dir = CONFIG.audio_path..name
     local randomfile = grabrandomsample(dir)
     local samplefilepath 
@@ -52,7 +52,7 @@ end
 function unload_sample(sample,name)
     proAudio.sampleDestroy(sample[name])
     sample[name] = nil
-    print("unloaded "..name)
+    --print("unloaded "..name)
     return sample
 end
 
@@ -141,7 +141,7 @@ print("loading test sound")
 local s=proAudio.sampleFromFile("/home/sonic/sonic-bike-init/startup-findingsong.wav")
 print("playing test sound")
 local b = proAudio.soundPlay(s, 1.0, 1.0, 0.0, 0.2)
-for i=0.3 , 1 , 0.1 do
+for i=0.3 , 2 , 0.1 do
     proAudio.soundUpdate(b, 1.0, 1.0, 0.0, i  )
     socket.sleep(0.25)
 end
@@ -155,12 +155,13 @@ proAudio.sampleDestroy(b)
 
 sample = {}
 sound = {}
-	    
-PITCH = { 
-  slow = 0.5 ,
-  normal = 1.0 , 
-  fast = 2.0 ,
-}
+pitches = {}
+
+--PITCH = { 
+--  slow = 0.5 ,
+--  normal = 1.0 , 
+--  fast = 2.0 ,
+--}
 
 local file = io.open("/tmp/dodo","r")
 
@@ -172,12 +173,12 @@ while true do
 
     local message , n, nn = string.match(line, "^(.-)%s(.-)$")
     --print("audio daemon received: "..message, n)
---    local n = tonumber(n)
+    -- local n = tonumber(n)
 
   if n and message then
 
     if message == "load" then
-       print("received load for:"..n)
+       --print("received load for:"..n)
        if not sample[n] then 
        	  sample=load_sample(sample,n) 
        end
@@ -291,10 +292,27 @@ while true do
     
     elseif message == "pitch" then
         local name,pitch = string.match(n, "^(.-)%s(.-)$")
-        print('AUdio daemon: '..name..': '..pitch)
+        pitch = tonumber(pitch)
+        --print('AUdio daemon: '..name)
         if sound[name] then
-            print('CHANGE PITCH')
+            if not pitches[name] then
+                pitches[name] = 1
+            end
+            from = pitches[name]
+            to = pitch
+            if from < to then
+                incr = 0.1
+            else
+                incr = -0.1
+            end
+            pause = 0.05
+            print('swamp_playd CHANGE PITCH OF:'..name..' from:'..from..' to:'..to..' incr:'..incr)
+            for i=from, to, incr do
+                proAudio.soundUpdate(b, 1.0, 1.0, 0.0, i)
+                socket.sleep(pause)
+            end
             proAudio.soundUpdate(sound[name], 1.0, 1.0, 0.0, tonumber(pitch))
+            pitches[name] = pitch
         end
         
     elseif message == "slow" then
