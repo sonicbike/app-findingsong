@@ -171,6 +171,63 @@ function cats_to_direction(parent,cats)
     return "centre";
 end
 
+function range(maxA, minA, maxB, minB, valA)
+    rangeA = maxA-minA
+    rangeB = maxB-minB  
+    valueB = (((valA-minA)*rangeB)/rangeA)+minB
+    return valueB 
+end
+
+function whats_my_pitch(direction, speed)
+    mode = CONFIG.pitch_mode
+    print("pitch_mode: "..mode)
+    -- Experiment: Pitch tied to speed
+    if mode == "pitch-speed" then
+        if speed > 0.01 then
+            speed = 0.01
+        end
+        maxA = 1.0
+        minA = 0
+        maxB = 2.0
+        minB = 0.2
+        setpitch = range(maxA, minA, maxB, minB, speed)
+        --print("lib/engin.lua Pitch:"..setpitch..' Speed:'..speed)
+        return setpitch
+    end
+    -- Experiment: Random pitch
+    if mode == "pitch-random" then
+        return math.random(10)*0.2
+    end 
+    -- Experiment: Pitch tied to direction
+    if mode == "pitch-direction" then
+        if (direction == "n") then
+        return 1
+        end
+        if (direction == "ne") then
+        return 2
+        end
+        if (direction == "e") then
+        return 2
+        end
+        if (direction == "se") then
+        return 2
+        end
+        if (direction == "s") then
+        return 1
+        end
+        if (direction == "sw") then
+        return 0.2
+        end
+        if (direction == "w") then
+        return 0.2
+        end
+        if (direction == "nw") then
+        return 0.2
+        end
+    end
+    return 1
+end
+
 ----------------------------------------------------------------
 -- not sure this is the best place for this!
 local panned_samples={}
@@ -190,8 +247,8 @@ function play_events(events,pos_state)
         end
         -- all the samples to be pitch changed
         for name,dir in pairs(pitch_change_samples) do
-            print("Change pitch of:"..name.." Direction:"..directionstate.direction)
-            newpitch = math.random(10)*0.2
+            print("Change pitch of:"..name.." Direction:"..directionstate.direction.. " Speed:"..pos_state.speed)
+            newpitch = whats_my_pitch(directionstate.direction, pos_state.speed)
             audioc.pitch(name,newpitch)
         end
 
@@ -242,6 +299,7 @@ function play_events(events,pos_state)
                 else
                     -- default behaviour
                     if event.type=="entered-zone" then
+                        print("!!!!entered zone!!!!!::: name:"..name..' loop:'..loop..' dir:'..dir )
                         if dir=="centre" then ----- normal -------
                             if loop=="no" then
                                 audioc.play(name)
@@ -294,8 +352,8 @@ function update_pos_state(pos,state)
         state.pos = pos
         state.new_direction=true
         state.direction = direction.resolve(poly.angle(state.dir))
-        log("speed is "..state.speed.."km/h"..
-            " direction is "..state.direction)
+        --log("speed is "..state.speed.."km/h".." direction is "..state.direction)
+        print("speed is "..state.speed.."km/h".." direction is "..state.direction)
     end
     directionstate = state
     return state

@@ -35,9 +35,8 @@ CONFIG=utils.load_json("/home/sonic/sdcard/config.json")
 ----------------------------------------------------------------------------
 
 function load_sample(sample,name)
-    --print("loading "..name)
     local dir = CONFIG.audio_path..name
-    local randomfile = grabrandomsample(dir)
+    local randomfile = grabrandomsample(dir, name)
     local samplefilepath 
     if randomfile ~= false then
         samplefilepath = dir.."/"..randomfile
@@ -90,12 +89,15 @@ end
 ----------------------------------------------------------------------------
 -- Grab a random filename from a directory
 -- Returns false if the directory doesn't exist
-function grabrandomsample(path)
+function grabrandomsample(path, name)
     local d = isdir(path)
     --print('File:'..path..' IsFile:'..tostring(f)..' IsDir:'..tostring(d))
     if d==true then 
         -- grab a random sample from the directory
-        sample = scandirforrandom(path, '.wav')
+        sample = scandirforrandom(path, name)
+        if sample ~= false then
+            randomloaded[name][sample] = sample 
+        end
         return sample
     else
         return false
@@ -111,18 +113,38 @@ function isdir(fn)
     end 
 end
 
-function scandirforrandom(directory)
-    local i, t, popen = 0, {}, io.popen
+function table_length(T)
+  local count = 0
+  for _ in pairs(T) do count = count + 1 end
+  return count
+end
+
+function scandirforrandom(directory, name)
+    local p, i, t, pp, popen = 0,0,{}, {}, io.popen
     for filename in popen('ls -a "'..directory..'"'):lines() do
         firstchar = string.sub(filename,1,1)
         if firstchar ~= '.' then
-            i = i + 1 
-            t[i] = filename
+            -- Check we haven't recently loaded this sample
+            if not randomloaded[name][filename] then
+                i = i + 1 
+                t[i] = filename
+            end
+            p=p+1
+            pp[p] = filename
         end 
     end 
-    if i == 0 then
+    randlength = table_length(randomloaded[name]) 
+    --print('TableLoaded Length:', randlength)
+    --print(utils.table_print(randomloaded))
+    if p == 0 then
         return false
     end 
+    if i == 0 and randlength ~= 0 then
+        --print('RESET rabdomloaded[]')
+        randomloaded[name] = {}
+        t = pp
+        i = p
+    end
     math.randomseed(os.time())
     rand = math.random(i)
     return t[rand]
@@ -141,31 +163,45 @@ end
 
 
 -- play a test sound at startup
-print("loading test sound")
+print("play startup sound")
 local s=proAudio.sampleFromFile("/home/sonic/sonic-bike-init/startup-findingsong.wav")
-print("playing test sound")
-local b = proAudio.soundPlay(s, 1.0, 1.0, 0.0, 0.2)
+local b=proAudio.soundPlay(s, 1.0, 1.0, 0.0, 0.2)
 for i=0.3 , 2 , 0.1 do
     proAudio.soundUpdate(b, 1.0, 1.0, 0.0, i  )
     socket.sleep(0.25)
 end
-socket.sleep(1)
-print("destroying sample")
+-- wait until the sound has finished:
+while proAudio.soundActive()>0 do
+  proAudio.sleep(0.05)
+end
+--socket.sleep(1)
+print("end startup sound")
 proAudio.sampleDestroy(s)
 proAudio.sampleDestroy(b)
 
 
 --- initialize the sample and sound table
-
 sample = {}
 sound = {}
-pitches = {}
+pitches = {} -- saves the current pitch of a sample
+randomloaded = {} -- saves which files have already been 'randomly selected'
 
 --PITCH = { 
 --  slow = 0.5 ,
 --  normal = 1.0 , 
 --  fast = 2.0 ,
 --}
+--n = "Yard"
+--randomloaded[n] = {}
+--while true do
+--  message = 'load'    
+--  if message == "load" then
+--       	sample=load_sample(sample,n) 
+--        pitches[n] = 1
+--  end
+--  socket.sleep(1)
+--end
+
 
 local file = io.open("/tmp/dodo","r")
 
@@ -176,20 +212,22 @@ while true do
   if line then
 
     local message , n, nn = string.match(line, "^(.-)%s(.-)$")
-    print("audio daemon received: "..message, n)
+    --print("audio daemon received: "..message, n)
     -- local n = tonumber(n)
 
   if n and message then
 
     if message == "load" then
        --print("received load for:"..n)
-       if not sample[n] then 
+       if not sample[n] then
+          randomloaded[n] = {}
        	  sample=load_sample(sample,n) 
           pitches[n] = 1
        end
 
     elseif message == "unload" then
        if sample[n] then 
+          randomloaded[n] = {}
        	  sample=unload_sample(sample,n) 
        	  pitches[n] = 1
        end
@@ -315,7 +353,7 @@ while true do
             if from ~= to then
                 for i=from, to, incr do
                     proAudio.soundUpdate(b, 1.0, 1.0, 0.0, i)
-                    print(i)
+                    --print(i)
                     socket.sleep(pause)
                 end
             end
