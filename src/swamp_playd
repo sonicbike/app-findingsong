@@ -12,12 +12,12 @@
 -- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 -- GNU General Public License for more details.
 -- You should have received a copy of the GNU General Public License
--- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-- along with this program.  If not, see <http://www.gnu.org/licenses
 
 local scriptpath=string.match(arg[0], '^.*/')
 
 package.path = package.path..";"..scriptpath.."/?.lua;"..scriptpath.."/../lib/?.lua"
-package.cpath = package.cpath..";"..scriptpath.."/?.so;"..scriptpath.."/../lib/?.so"
+package.cpath = package.cpath..";"..scriptpath.."/?.so;"..scriptpath.."/../lib/?.so;"  --/home/sonic/app-findingsong/src/?.so"
 
 
 -- create an audio device using default parameters and exit in case of errors
@@ -27,7 +27,7 @@ require("socket")
 require 'json'
 require('utils')
 
-print("starting player")
+print("swamp_playd: starting player")
 posix.mkfifo("/tmp/dodo")
 
 CONFIG=utils.load_json("/home/sonic/sdcard/config.json")
@@ -44,14 +44,14 @@ function load_sample(sample,name)
         samplefilepath = CONFIG.audio_path..name..".wav"
     end
     sample[name] = proAudio.sampleFromFile(samplefilepath)
-    print("loaded "..name)
+    print("swamp_playd loaded: "..name.." file:"..samplefilepath)
     return sample
 end
 
 function unload_sample(sample,name)
     proAudio.sampleDestroy(sample[name])
     sample[name] = nil
-    --print("unloaded "..name)
+    print("swamp_playd unloaded: "..name)
     return sample
 end
 
@@ -163,19 +163,20 @@ end
 
 
 -- play a test sound at startup
-print("play startup sound")
+print("swamp_playd: play startup sound")
 local s=proAudio.sampleFromFile("/home/sonic/sonic-bike-init/startup-findingsong.wav")
 local b=proAudio.soundPlay(s, 1.0, 1.0, 0.0, 0.2)
 for i=0.3 , 2 , 0.1 do
     proAudio.soundUpdate(b, 1.0, 1.0, 0.0, i  )
     socket.sleep(0.25)
 end
+--print("end of loop")
 -- wait until the sound has finished:
 while proAudio.soundActive()>0 do
   proAudio.sleep(0.05)
 end
 --socket.sleep(1)
-print("end startup sound")
+print("swamp_playd: end startup sound")
 proAudio.sampleDestroy(s)
 proAudio.sampleDestroy(b)
 
@@ -185,23 +186,13 @@ sample = {}
 sound = {}
 pitches = {} -- saves the current pitch of a sample
 randomloaded = {} -- saves which files have already been 'randomly selected'
+oneshots = {}
 
 --PITCH = { 
 --  slow = 0.5 ,
 --  normal = 1.0 , 
 --  fast = 2.0 ,
---}
---n = "Yard"
---randomloaded[n] = {}
---while true do
---  message = 'load'    
---  if message == "load" then
---       	sample=load_sample(sample,n) 
---        pitches[n] = 1
---  end
---  socket.sleep(1)
---end
-
+--
 
 local file = io.open("/tmp/dodo","r")
 
@@ -214,7 +205,6 @@ while true do
     local message , n, nn = string.match(line, "^(.-)%s(.-)$")
     --print("audio daemon received: "..message, n)
     -- local n = tonumber(n)
-
   if n and message then
 
     if message == "load" then
@@ -227,34 +217,49 @@ while true do
 
     elseif message == "unload" then
        if sample[n] then 
-          randomloaded[n] = {}
+          --randomloaded[n] = {}
        	  sample=unload_sample(sample,n) 
        	  pitches[n] = 1
        end
 
     elseif message == "play" then
-         if not sound[n] then
-	    if sample[n] then 
-	        print("PLAYING "..n)
-	        sound[n] = proAudio.soundPlay(sample[n], 2.0, 2.0, 0.0, pitches[n])
-	    else 
-	        print("!!!!!!!!!! sound "..n.." not loaded")
+        if not sound[n] then
+            if sample[n] then 
+                print("swamp_playd play: "..n)
+                if oneshots[n] then
+                    oneshots[n]['started'] = true
+                    oneshots[n]['length'] = true
+                end
+                sound[n] = proAudio.soundPlay(sample[n], 2.0, 2.0, 0.0, pitches[n])
+            else 
+                print("swamp_playd play:"..n.." not loaded")
                 print_samples(sample)
                 play_not_found()
-	    end
-         else
-            print("sound "..n.." allready playing")
-         end
+            end
+        else
+            print("swamp_playd play:"..n.." already playing")
+        end
+    
+    elseif message == "isoneshot" then
+        if not oneshots[n] then
+            print("swamp_playd isoneshot create table for:"..n)
+            oneshots[n] = {}
+            oneshots[n]['started'] = false
+            oneshots[n]['length'] = false
+            oneshots[n]['loaded'] = false
+        else
+            print("swamp_playd isoneshot table already exists for:"..n)
+        end
 
     elseif message == "loop" then
          if not sound[n] then
 	    if sample[n] then sound[n] = proAudio.soundLoop(sample[n], 2.0, 2.0, 0.0, pitches[n])
 	    else 
-                print("!!!!!!!!!! sound "..n.." not loaded")
+                print("swamp_playd loop:"..n.." not loaded")
                 play_not_found()
 	    end
          else
-            print("sound "..n.." allready playing")
+            print("swamp_playd loop"..n.." allready playing")
          end
 
    elseif message == "play_right" then
@@ -381,7 +386,7 @@ while true do
 
     elseif message == "fadeout" then
         if sound[n] then
-    	   print("fading...")
+    	   print("swamp_playd fading:"..n)
              for i= 1 , 0 , -0.1 do
                  proAudio.soundUpdate( sound[n], i, i, 0.0, pitches[n]  )
                  socket.sleep(0.25)
