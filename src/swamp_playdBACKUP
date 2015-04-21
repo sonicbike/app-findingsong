@@ -38,7 +38,7 @@ function load_sample(sample,name)
     local samplefilepath 
     if randomfile ~= false then
         samplefilepath = dir.."/"..randomfile
-        print("swamp_playd loaded RANDOM: "..name.." file:"..samplefilepath)
+        --print("swamp_playd loaded RANDOM: "..name.." file:"..samplefilepath)
     else
         samplefilepath = CONFIG.audio_path..name..".wav"
         print("swamp_playd loaded: "..name.." file:"..samplefilepath)
@@ -93,9 +93,6 @@ function grabrandomsample(path, name)
     --print('File:'..path..' IsFile:'..tostring(f)..' IsDir:'..tostring(d))
     if d==true then 
         -- grab a random sample from the directory
-        if not randomloaded[name] then
-           randomloaded[name] = {}
-       	end
         sample = scandirforrandom(path, name)
         if sample ~= false then
             --print('*****************************************************************************************************RANDOMload:'..name..' sample:'..sample)
@@ -225,16 +222,16 @@ while true do
   if line then
 
     local message , n, nn = string.match(line, "^(.-)%s(.-)$")
-    --print("swamp_playd received: "..message, n)
+    print("swamp_playd received: "..message, n)
     -- local n = tonumber(n)
   if n and message then
 
     if message == "load" then
        --print("received load for:"..n)
        if not sample[n] then
-            --if not randomloaded[n] then
-            --    randomloaded[n] = {}
-       	    --end
+            if not randomloaded[n] then
+                randomloaded[n] = {}
+       	    end
        	    sample=load_sample(sample,n) 
             pitches[n] = 1
        end
@@ -295,7 +292,6 @@ while true do
    elseif message == "play_right" then
          if not sound[n] then
 	    if sample[n] then 
-	            print("swamp_playd play_right: "..n)
                 sound[n] = proAudio.soundPlay(sample[n])
                 proAudio.soundUpdate( sound[n], 0.0, 2.0, 0.0, pitches[n] )
 	    else 
@@ -309,9 +305,8 @@ while true do
    elseif message == "play_left" then
          if not sound[n] then
 	    if sample[n] then 
-	        print("swamp_playd play_left: "..n)
-	        sound[n] = proAudio.soundPlay(sample[n])
-            proAudio.soundUpdate( sound[n], 2.0, 0.0, 0.0, pitches[n] )
+	        sound[n] = proAudio.soundLoop(sample[n])
+                proAudio.soundUpdate( sound[n], 2.0, 0.0, 0.0, pitches[n] )
 	    else 
                 print("!!!!!!!!!! sound "..n.." not loaded")
                 play_not_found()
@@ -323,7 +318,6 @@ while true do
    elseif message == "loop_right" then
          if not sound[n] then
 	    if sample[n] then 
-	            print("swamp_playd loop_right: "..n)
                 sound[n] = proAudio.soundLoop(sample[n],1,0, 0.0, pitches[n])
 	    else 
                 print("!!!!!!!!!! sound "..n.." not loaded")
@@ -336,28 +330,25 @@ while true do
    elseif message == "loop_left" then
          if not sound[n] then
 	    if sample[n] then 
-	            print("swamp_playd loop_left: "..n)
                 sound[n] = proAudio.soundLoop(sample[n],0,1, 0.0, pitches[n])
 	    else 
                 print("!!!!!!!!!! sound "..n.." not loaded")
                 play_not_found()
 	    end
          else
-            print("sound "..n.." already playing")
+            print("sound "..n.." allready playing")
          end
 
     elseif message == "stop" then
          if n == 100 then
             for z = 1, 22 do
                if sound[n] then
-                print("swamp_playd stop 100:"..n)
                 proAudio.soundStop(sound[n])
                 sound[n] = false
                end
             end
          else
              if sound[n] then
-                print("swamp_playd stop: "..n)
                  proAudio.soundStop(sound[n])
                  sound[n] = false
              end
@@ -365,14 +356,12 @@ while true do
 
     elseif message == "right" then
           if sound[n] then
-            print("swamp_playd right: "..n)
              proAudio.soundUpdate( sound[n], 0.0, 2.0, 0.0, pitches[n])
              --posix.sleep(1)
           end
 
     elseif message == "left" then
          if sound[n] then
-            print("swamp_playd left: "..n)
              proAudio.soundUpdate( sound[n], 2.0, 0.0, 0.0, pitches[n] )  
              --posix.sleep(2)
          end
@@ -396,7 +385,7 @@ while true do
             if from ~= to then
                 for i=from, to, incr do
                     proAudio.soundUpdate(sound[name], 1.0, 1.0, 0.0, i)
-                    --print(i)
+                    print(i)
                     socket.sleep(pause)
                 end
             end
@@ -430,17 +419,6 @@ while true do
                  socket.sleep(0.25)
              end
           proAudio.soundStop(sound[n])
-          if randomloaded[n] then
-            print('swamp_playd unload RANDOM:'..n..' ********************************************************')
-            sample=unload_sample(sample,n) 
-            sample=load_sample(sample,n)
-            --sound[n] = proAudio.soundPlay(sample[n], 2.0, 2.0, 0.0, pitches[n])
-            sound[n] = proAudio.soundPlay(sample[n])
-            proAudio.soundUpdate( sound[n], 0.0, 2.0, 0.0, pitches[n] )
-            proAudio.soundStop(sound[n])
-            --sound[n] = nil
-            --sample[n] = nil
-          end
           sound[n] = false
         end
     else

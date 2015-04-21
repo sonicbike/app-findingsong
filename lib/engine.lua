@@ -238,7 +238,7 @@ function play_events(events,pos_state)
     
     -- first if the direction has been updated, go through
     if pos_state.new_direction then
-        print("updating direction")
+        --print("updating direction")
         -- all the panned samples
         for name,dir in pairs(panned_samples) do
             local pan=direction.pan_from(pos_state.dir,dir)
@@ -290,26 +290,30 @@ function play_events(events,pos_state)
                 -- is it a one shot sample?
                 if (utils.find_value("Sample Parameters:One shot",event.zone_categories)) then
                     one_shot_samples[name]="yes"
+                    --print('engine.lua found one shot:'..name)
+                    audioc.isoneshot(name)
                 end
 
                 -- look for an override
                 local override=overrides[event.zone_name]
                 if override then
+                    print("engin.lua dispatch override: name:"..name..' loop:'..loop..' dir:'..dir )
                     dispatch_override(event,pos_state,override)
                 else
                     -- default behaviour
                     if event.type=="entered-zone" then
-                        print("!!!!entered zone!!!!!::: name:"..name..' loop:'..loop..' dir:'..dir )
                         if dir=="centre" then ----- normal -------
                             if loop=="no" then
+                                --print("engin.lua play once: name:"..name..' loop:'..loop..' dir:'..dir )
                                 audioc.play(name)
                             else
+                                --print("engin.lua play and loop: name:"..name..' loop:'..loop..' dir:'..dir )
                                 audioc.loop(name)
                             end
                         else ------- directional ---------------
                             -- add to panned samples so we can update it later
                             panned_samples[name]=dir
-                            print("added panned "..name.." "..dir)
+                            --print("added panned "..name.." "..dir)
                             local pan=direction.pan_from(pos_state.dir,dir)
                             if loop=="no" then
                                 audioc.play(name,pan)
@@ -325,7 +329,10 @@ function play_events(events,pos_state)
                         panned_samples[name]=nil
                     end
                     if one_shot_samples[name]~="yes" then
+                        print('engin.lua left-zone fadeout sample:'..name)
                         audioc.fadeout(name)
+                    else
+                        print('engin.lua left-zone leave one shot playing:'..name)
                     end
                 end
 
@@ -353,7 +360,7 @@ function update_pos_state(pos,state)
         state.new_direction=true
         state.direction = direction.resolve(poly.angle(state.dir))
         --log("speed is "..state.speed.."km/h".." direction is "..state.direction)
-        print("speed is "..state.speed.."km/h".." direction is "..state.direction)
+        --print("speed is "..state.speed.."km/h".." direction is "..state.direction)
     end
     directionstate = state
     return state

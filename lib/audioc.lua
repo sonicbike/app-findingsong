@@ -50,7 +50,7 @@ function play(id, channel)
   else
      message = "play_"..channel.." "..id
   end
-  print("sending "..message)
+  --print("sending "..message)
   send(message)
 end
 
@@ -64,6 +64,10 @@ function loop(id, channel)
   send(message)
 end
 
+function isoneshot(name)
+    message = "isoneshot "..name
+    send(message)
+end
 
 ---
 function stop(id)

@@ -86,7 +86,7 @@ function get_events_from_layer(pos,state,layer,events,new_state,t)
     for i,zone in pairs(current_zones) do
         -- if the current location was not seen last time
         if not utils.find_value(zone.name,last_zone_names) then
-   	        print("--------------------- playing "..zone.name.." -------")
+   	        --print("--------------------- playing "..zone.name.." -------")
       	    table.insert(new_events,{type="entered-zone",
                                      layer_name=layer.name,
 	    			     zone_name=zone.name,
@@ -146,7 +146,7 @@ function get_prox_samples_from_layer(pos,state,layer,events,new_state,t)
     for i,zone in pairs(current_zones) do
         -- if the current location was not seen last time
         if not utils.find_value(zone.name,last_zone_names) then
-	    print("--------------------- entering area around "..zone.name.." for loading -------")
+	        --print("--------------------- entering area around "..zone.name.." for loading -------")
       	    table.insert(new_events,{type="entered-zone",
                                      layer_name=layer.name,
 	    			     zone_name=zone.name,
@@ -204,7 +204,7 @@ end
 function test_map(map, logfile)
     for layer_index,layer in pairs(map) do
     	for zone_index,zone in pairs(layer.zones) do
-	        print("checking: "..zone.name) 
+	        --print("checking: "..zone.name) 
             local file=CONFIG.audio_path..zone.name..".wav";
 	    -- utils.table_print(zone)
 

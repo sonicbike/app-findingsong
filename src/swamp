@@ -31,11 +31,17 @@ require 'random'
 require 'audioc'
 require 'socket'
 local logfile = CONFIG.logfile
+local gpslogfile = CONFIG.gpslog
 local gpsdev  = CONFIG.gps_device
 local mapfile = CONFIG.mapfile
 local module  = "swamp"
 local fake_gps = CONFIG.fake_gps
 local fake_gps_log = CONFIG.fake_gps_log
+
+
+-- Zero the logs so they dont fill up!!
+os.execute("echo 'START LOGGING' > "..logfile)
+os.execute("echo 'START LOGGING' > "..gpslogfile)
 
 function isfile(file)
     print(file)
@@ -117,7 +123,7 @@ while true do
         line = io.read()
         line = string.sub(line, 26)
     end
-    --print(line)    
+    print(line)    
  
     -- Ghost zone speed?
     local period_seconds=60*10
