@@ -1,5 +1,16 @@
 SONIC BIKE SETUP
 ===================
+
+## The lastest installation instructions can be found here:
+https://github.com/sonicbikes/sonic-bike-init
+
+
+## The following instructions are provided as legacy documentation for the Beagle Bone Black
+A Bicrophonic Research Institute (BRI) Project: www.sonicbikes.net
+
+Find further information on building sonic bike here:
+http://wiki.sonicbikes.net/index.php?title=Hardware
+
 A Bricrophonic Research Institute (BRI) Project: www.sonicbikes.net
 
 Find further information on building a sonic bike here:
