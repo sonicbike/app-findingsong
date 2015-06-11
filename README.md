@@ -10,11 +10,6 @@ A Bicrophonic Research Institute (BRI) Project: www.sonicbikes.net
 
 Find further information on building sonic bike here:
 http://wiki.sonicbikes.net/index.php?title=Hardware
-
-A Bricrophonic Research Institute (BRI) Project: www.sonicbikes.net
-
-Find further information on building a sonic bike here:
-http://wiki.sonicbikes.net/index.php?title=Hardware
   
 ##The Hardware
 - Beagle Bone Black.
