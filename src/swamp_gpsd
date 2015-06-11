@@ -24,7 +24,7 @@ require 'json'
 require 'gps'
 
 -- get config settings
-CONFIG=utils.load_json("/home/sonic/sdcard/config.json") 
+CONFIG=utils.load_json("/home/sonic/audio/config.json") 
 local logfile = CONFIG.logfile
 local gpsdev  = CONFIG.gps_device
 local gpsbaud = CONFIG.gps_baud

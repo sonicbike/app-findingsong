@@ -30,7 +30,7 @@ require('utils')
 print("swamp_playd: starting player")
 posix.mkfifo("/tmp/dodo")
 
-CONFIG=utils.load_json("/home/sonic/sdcard/config.json")
+CONFIG=utils.load_json("/home/sonic/audio/config.json")
 
 function load_sample(sample,name)
     local dir = CONFIG.audio_path..name
